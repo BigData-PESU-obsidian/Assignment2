@@ -3,6 +3,7 @@ import time
 import sys
 import subprocess
 from kazoo.client import KazooClient
+from kazoo.client import KazooState
 
 try:
     # Initial connection establishment
@@ -13,6 +14,26 @@ try:
     stop = bool(int.from_bytes(client.get("/stop")[0], byteorder="little"))
     if(stop):
         exit(0)
+
+    def clientListner(state):
+        """
+        This is a listner added to the client to handle what happens when there
+        is a failure
+
+        WORKING : exits safely on disconnection or on losing session from the
+                  ZooKeeper process
+        """
+
+        if(state == KazooState.LOST):
+            print("Client {} lost session from ZooKeeper".format(os.getpid()))
+            exit(0)
+        elif(stste == KazooState.SUSPENDED):
+            print("Client {} disconnected from ZooKeeper".format(os.getpid()))
+            exit(0)
+        else:
+            print("State of Client {} changed".format(os.getpid()))
+
+    client.add_listener(clientListner)
 
     # create an ephemeral , sequence znode and get its name
     isMaster = False

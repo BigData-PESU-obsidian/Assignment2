@@ -5,6 +5,8 @@ import subprocess
 from kazoo.client import KazooClient
 from kazoo.client import KazooState
 
+NUM_CHILDREN = 5
+
 try:
     # Initial connection establishment
     client = KazooClient(hosts="127.0.0.1:2181")
@@ -40,28 +42,43 @@ try:
     nodePath = client.create("/assignment2/lck", ephemeral=True, sequence=True)
 
     retval = nodePath.split("/")[2]
-    client.set(nodePath, bytes([os.getpid() % 256]))
+    client.set(nodePath, os.getpid().to_bytes(100, 'little'))
 
+    def checkChildren(check):
+        """
+        creates children
+
+        WORKING : If the current number of children is under the 
+                  threshold, creates the remaining number of 
+                  children required
+        """
+
+        diff = NUM_CHILDREN - len(client.get_children("/assignment2"))
+        if(diff <= 0):
+            return(False)
+        
+        for j in range(diff):
+            p = subprocess.Popen(['python', 'dynamic.py'])
+        print("Current state of /assignment2 is {}".format(client.get_children("/assignment2", watch=checkChildren)))
+        return(True)    
+        
+            
     def masterFun1():
         """
         This is the function thats called as soon as one process becomes the
         master
 
-        WORKING : This creates a new process which again runs the same program
-                  and after creation, the current master program terminates
-                  after 1 second, thus releasing the lock and letting a new
-                  process take over and continue
+        WORKING : Maintains the same number of children as specified in
+                  NUM_CHILDREN
         """
-
-        p = subprocess.Popen(['python', 'dynamic.py'])
-        print("New master node is {}".format(retval))
-        i = 0
-        while(i < 1):
-            time.sleep(1)
-            i += 1
-        global isMaster
-        isMaster = True
-        client.delete("/assignment2/"+retval)
+        
+        curr = client.get_children("/assignment2", watch=checkChildren)
+        
+        print("*****************************************")
+        print("New master pid is {}".format(os.getpid()))
+        checkChildren(None)
+        print("*****************************************")
+            
 
     def onElection(election):
         """
@@ -80,10 +97,10 @@ try:
         lst = [(int.from_bytes(client.get("/assignment2/"+child)[0],
                                byteorder="little"), child)
                for child in client.get_children("/assignment2")]
-        lst.sort(key=lambda x: x[1])
+        lst.sort(key=lambda x: x[0])
 
-        # if(lst[0][0] == (os.getpid() % 256)):
-        if(lst[0][1] == retval):
+        if(lst[0][0] == os.getpid()):
+            #if(lst[0][1] == retval):
             masterFun1()
         else:
             client.get("/assignment2/"+lst[0][1], watch=onElection)

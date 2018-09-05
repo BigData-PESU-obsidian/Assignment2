@@ -23,6 +23,7 @@ start = False
 while(not start):
     ans = input("Start simulation?(y/n) ")
     if(ans == "y"):
+        zk.set("/stop", bytes([0]))
         zk.stop()
         start = True
     else:
@@ -35,6 +36,8 @@ while(not stop):
     if(ans == "y"):
         zk.start()
         zk.set("/stop", bytes([1]))
+        #zk.delete("/assignment2", recursive = True)
+        #zk.delete("/stop", recursive = True)
         stop = True
     else:
         pass

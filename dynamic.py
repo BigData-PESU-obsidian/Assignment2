@@ -27,7 +27,7 @@ try:
         if(state == KazooState.LOST):
             print("Client {} lost session from ZooKeeper".format(os.getpid()))
             exit(0)
-        elif(stste == KazooState.SUSPENDED):
+        elif(state == KazooState.SUSPENDED):
             print("Client {} disconnected from ZooKeeper".format(os.getpid()))
             exit(0)
         else:
@@ -54,7 +54,7 @@ try:
         """
 
         p = subprocess.Popen(['python', 'dynamic.py'])
-        print("New master {}".format(retval))
+        print("New master node is {}".format(retval))
         i = 0
         while(i < 1):
             time.sleep(1)
@@ -68,20 +68,22 @@ try:
         This is the listner function called on each of the non-master processes
         as soon as the current master dies.
 
-        WORKING : This checks if the current process' PID is
+        WORKING : This checks if the current process' sequence number is
                   equal to the minimum thats present or not.
-                  if the current PID is equal to the minimum present in the
-                  list of sequential children nodes, then this function calls
-                  the above mentioned masterFun function else it resets its
-                  watcher on the current minimum znode.
+                  if the current sequence number is equal to the minimum
+                  present in the list of sequential children nodes, then
+                  this function calls the above mentioned masterFun
+                  function else it resets its watcher on the current
+                  minimum znode.
         """
 
         lst = [(int.from_bytes(client.get("/assignment2/"+child)[0],
                                byteorder="little"), child)
                for child in client.get_children("/assignment2")]
-        lst.sort(key=lambda x: x[0])
+        lst.sort(key=lambda x: x[1])
 
-        if(lst[0][0] == (os.getpid() % 256)):
+        # if(lst[0][0] == (os.getpid() % 256)):
+        if(lst[0][1] == retval):
             masterFun1()
         else:
             client.get("/assignment2/"+lst[0][1], watch=onElection)
